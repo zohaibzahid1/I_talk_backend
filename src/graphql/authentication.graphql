@@ -1,0 +1,11 @@
+extend type Query {
+ # get the google authentication url that frontend will use to redirect user
+ getGoogleAuthUrl: String!
+ # get the current authenticated user
+validateToken: Boolean!
+}
+
+extend type Mutation {
+ # logout the current user and clear authentication cookies
+ logout: Boolean!
+}

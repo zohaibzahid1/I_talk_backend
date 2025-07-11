@@ -1,0 +1,18 @@
+type Chat {
+  id: ID!
+  isGroup: Boolean!
+  name: String
+  participants: [User!]!
+  messages: [Message!]!
+}
+
+extend type Query {
+  getChat(id: ID!): Chat
+  getUserChats(userId: ID!): [Chat!]!
+}
+
+extend type Mutation {
+  createChat(isGroup: Boolean!, name: String, participantIds: [ID!]!): Chat!
+  addParticipant(chatId: ID!, userId: ID!): Chat!
+  removeParticipant(chatId: ID!, userId: ID!): Chat!
+}

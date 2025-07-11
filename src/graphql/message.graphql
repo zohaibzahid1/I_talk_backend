@@ -1,0 +1,22 @@
+scalar DateTime
+
+type Message {
+  id: ID!
+  content: String!
+  sender: User!
+  chat: Chat!
+  createdAt: DateTime!
+}
+
+extend type Query {
+  getMessages(chatId: ID!): [Message!]!
+}
+
+extend type Mutation {
+  sendMessage(chatId: ID!, content: String!): Message!
+  deleteMessage(messageId: ID!): Boolean!
+}
+
+extend type Subscription {
+  messageAdded(chatId: ID!): Message!
+}

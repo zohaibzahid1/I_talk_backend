@@ -1,0 +1,25 @@
+type User {
+  id: ID!
+  email: String!
+  isOnline: Boolean!
+  googleId: String
+  messages: [Message!]!
+  chats: [Chat!]!
+  firstName: String
+  lastName: String
+  avatar: String
+}
+
+extend type Query {
+  getUser(id: ID!): User
+  getAllUsers: [User!]!
+  getCurrentUser: User
+}
+
+extend type Mutation {
+  updateUserStatus(isOnline: Boolean!): User!
+}
+
+extend type Subscription {
+  userStatusChanged(userId: ID!): User!
+}
