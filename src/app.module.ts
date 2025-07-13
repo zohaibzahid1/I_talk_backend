@@ -7,6 +7,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthenticationModule } from './authentication/authentication.module';
 import { UsersModule } from './users/user.module';
+import { ChatModule } from './chat/chat.module';
 import { User } from './entities/users.entity';
 import { Message } from './entities/message.entity';
 import { Chat } from './entities/chat.entity';
@@ -35,6 +36,7 @@ import { Chat } from './entities/chat.entity';
     }),
     UsersModule,
     AuthenticationModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],

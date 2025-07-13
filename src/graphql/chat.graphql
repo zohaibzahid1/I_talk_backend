@@ -7,12 +7,13 @@ type Chat {
 }
 
 extend type Query {
-  getChat(id: ID!): Chat
-  getUserChats(userId: ID!): [Chat!]!
+  getChat(id: Int!): Chat
+  getUserChats: [Chat!]!
 }
 
 extend type Mutation {
-  createChat(isGroup: Boolean!, name: String, participantIds: [ID!]!): Chat!
-  addParticipant(chatId: ID!, userId: ID!): Chat!
-  removeParticipant(chatId: ID!, userId: ID!): Chat!
+  openOrCreateChat(otherUserId: Int!): Chat!
+  createGroupChat(name: String!, participantIds: [Int!]!): Chat!
+  addParticipant(chatId: Int!, userId: Int!): Chat!
+  removeParticipant(chatId: Int!, userId: Int!): Chat!
 }
