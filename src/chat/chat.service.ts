@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Chat } from '../entities/chat.entity';
@@ -14,6 +14,8 @@ export class ChatService {
     private userRepository: Repository<User>,
     @InjectRepository(Message)
     private messageRepository: Repository<Message>,
+    @Inject(forwardRef(() => require('./chat.gateway').ChatGateway))
+    private chatGateway?: any,
   ) {}
 
   async findOrCreateDirectChat(currentUserId: number, otherUserId: number): Promise<Chat> {
@@ -64,6 +66,11 @@ export class ChatService {
 
     const savedChat = await this.chatRepository.save(newChat);
     
+    // 🚀 Emit new chat to both participants
+    if (this.chatGateway) {
+      await this.chatGateway.emitNewChat(savedChat.id, [currentUserId, otherUserId]);
+    }
+    
     // Return chat with all relations loaded
     return await this.chatRepository.findOne({
       where: { id: savedChat.id },
@@ -87,32 +94,51 @@ export class ChatService {
       messages: []
     });
 
-    return await this.chatRepository.save(newChat);
+    const savedChat = await this.chatRepository.save(newChat);
+
+    // 🚀 Emit new chat to all participants
+    if (this.chatGateway) {
+      await this.chatGateway.emitNewChat(savedChat.id, participantIds);
+    }
+
+    return savedChat;
   }
 
   async findChatById(id: number): Promise<Chat | null> {
     return await this.chatRepository.findOne({
       where: { id },
-      relations: ['participants', 'messages', 'messages.sender']
+      relations: ['participants']
     });
   }
 
   async getUserChats(userId: number): Promise<Chat[]> {
-  const chats = await this.chatRepository
-    .createQueryBuilder('chat')
-    .leftJoin('chat.participants', 'filterParticipant') // for filtering only
-    .leftJoinAndSelect('chat.participants', 'participant') // actual full participant list
-    .leftJoinAndSelect('chat.messages', 'message')
-    .leftJoinAndSelect('message.sender', 'sender')
-    .where('filterParticipant.id = :userId', { userId }) // filtering only
-    .orderBy('chat.id', 'DESC')
-    .addOrderBy('message.createdAt', 'ASC')
-    .getMany();
+    const chats = await this.chatRepository
+      .createQueryBuilder('chat')
+      .leftJoin('chat.participants', 'filterParticipant') // for filtering only
+      .leftJoinAndSelect('chat.participants', 'participant') // actual full participant list
+      .where('filterParticipant.id = :userId', { userId }) // filtering only
+      .orderBy('chat.id', 'DESC')
+      .getMany();
 
-  console.log('User chats:', chats);
-  console.log('Chat participants:', chats.map(chat => chat.participants));
-  return chats;
-}
+    console.log('User chats (without messages):', chats);
+    console.log('Chat participants:', chats.map(chat => chat.participants));
+    return chats;
+  }
+
+  // New method to get messages for a specific chat
+  async getChatMessages(chatId: number, limit: number = 50, offset: number = 0): Promise<Message[]> {
+    const messages = await this.messageRepository
+      .createQueryBuilder('message')
+      .leftJoinAndSelect('message.sender', 'sender')
+      .where('message.chatId = :chatId', { chatId })
+      .orderBy('message.createdAt', 'ASC')
+      .limit(limit)
+      .offset(offset)
+      .getMany();
+
+    console.log(`Chat ${chatId} messages:`, messages);
+    return messages;
+  }
 
 
   async addParticipant(chatId: number, userId: number): Promise<Chat> {
@@ -171,9 +197,16 @@ export class ChatService {
     const savedMessage = await this.messageRepository.save(message);
     
     // Return message with sender information loaded
-    return await this.messageRepository.findOne({
+    const messageWithSender = await this.messageRepository.findOne({
       where: { id: savedMessage.id },
       relations: ['sender']
     }) || savedMessage;
+
+    // 🚀 Emit the message to all connected sockets
+    if (this.chatGateway) {
+      await this.chatGateway.emitNewMessage(messageWithSender, chatId);
+    }
+
+    return messageWithSender;
   }
 }

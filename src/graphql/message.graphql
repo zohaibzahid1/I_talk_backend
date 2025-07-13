@@ -10,10 +10,11 @@ type Message {
 
 extend type Query {
   getMessages(chatId: ID!): [Message!]!
+  getChatMessages(chatId: Int!, limit: Int = 50, offset: Int = 0): [Message!]!
 }
 
 extend type Mutation {
-  sendMessage(chatId: ID!, content: String!): Message!
+  sendMessageToDB(chatId: ID!, content: String!): Message!
   deleteMessage(messageId: ID!): Boolean!
 }
 

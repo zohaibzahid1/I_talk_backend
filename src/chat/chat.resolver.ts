@@ -24,6 +24,33 @@ export class ChatResolver {
     }
     return await this.chatService.getUserChats(user.userId);
   }
+
+  @Query(() => [Message])
+  @UseGuards(JwtGuard)
+  async getChatMessages(
+    @Args('chatId', { type: () => Int }) chatId: number,
+    @Args('limit', { type: () => Int, defaultValue: 50 }) limit: number,
+    @Args('offset', { type: () => Int, defaultValue: 0 }) offset: number,
+    @Context() context: any
+  ): Promise<Message[]> {
+    const user = context.req.user;
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Verify user is participant in the chat
+    const chat = await this.chatService.findChatById(chatId);
+    if (!chat) {
+      throw new Error('Chat not found');
+    }
+
+    const isParticipant = chat.participants.some(p => p.id === user.userId);
+    if (!isParticipant) {
+      throw new Error('User is not a participant in this chat');
+    }
+
+    return await this.chatService.getChatMessages(chatId, limit, offset);
+  }
   
 
 
