@@ -1,4 +1,4 @@
-import { Injectable, Inject, forwardRef } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Chat } from '../entities/chat.entity';
@@ -14,8 +14,6 @@ export class ChatService {
     private userRepository: Repository<User>,
     @InjectRepository(Message)
     private messageRepository: Repository<Message>,
-    @Inject(forwardRef(() => require('./chat.gateway').ChatGateway))
-    private chatGateway?: any,
   ) {}
 
   async findOrCreateDirectChat(currentUserId: number, otherUserId: number): Promise<Chat> {
@@ -32,17 +30,29 @@ export class ChatService {
       .getRawOne();
 
     if (existingChatId) {
-      // Return existing chat with full participants data
+      // Return existing chat with participants and last message only
       const fullChat = await this.chatRepository.findOne({
         where: { id: existingChatId.chat_id },
-        relations: ['participants', 'messages', 'messages.sender']
+        relations: ['participants']
       });
       
       if (!fullChat) {
         throw new Error('Chat not found');
       }
-      
-      return fullChat;
+
+      // Get the last message for the existing chat
+      const lastMessage = await this.messageRepository
+        .createQueryBuilder('message')
+        .leftJoinAndSelect('message.sender', 'sender')
+        .where('message.chatId = :chatId', { chatId: fullChat.id })
+        .orderBy('message.createdAt', 'DESC')
+        .limit(1)
+        .getOne();
+
+      return {
+        ...fullChat,
+        lastMessage: lastMessage || null
+      };
     }
 
     // If no existing chat, create a new one
@@ -66,16 +76,16 @@ export class ChatService {
 
     const savedChat = await this.chatRepository.save(newChat);
     
-    // 🚀 Emit new chat to both participants
-    if (this.chatGateway) {
-      await this.chatGateway.emitNewChat(savedChat.id, [currentUserId, otherUserId]);
-    }
-    
-    // Return chat with all relations loaded
-    return await this.chatRepository.findOne({
+    // Return chat with participants and lastMessage as null (new chat)
+    const chatWithParticipants = await this.chatRepository.findOne({
       where: { id: savedChat.id },
-      relations: ['participants', 'messages', 'messages.sender']
+      relations: ['participants']
     }) || savedChat;
+
+    return {
+      ...chatWithParticipants,
+      lastMessage: null
+    };
   }
 
   async createGroupChat(name: string, participantIds: number[]): Promise<Chat> {
@@ -96,12 +106,11 @@ export class ChatService {
 
     const savedChat = await this.chatRepository.save(newChat);
 
-    // 🚀 Emit new chat to all participants
-    if (this.chatGateway) {
-      await this.chatGateway.emitNewChat(savedChat.id, participantIds);
-    }
-
-    return savedChat;
+    // Return new chat with lastMessage as null
+    return {
+      ...savedChat,
+      lastMessage: null
+    };
   }
 
   async findChatById(id: number): Promise<Chat | null> {
@@ -120,9 +129,37 @@ export class ChatService {
       .orderBy('chat.id', 'DESC')
       .getMany();
 
-    console.log('User chats (without messages):', chats);
-    console.log('Chat participants:', chats.map(chat => chat.participants));
-    return chats;
+    // Get the latest message for each chat and attach it
+    const chatsWithLastMessage = await Promise.all(
+      chats.map(async (chat) => {
+        const lastMessage = await this.messageRepository
+          .createQueryBuilder('message')
+          .leftJoinAndSelect('message.sender', 'sender')
+          .where('message.chatId = :chatId', { chatId: chat.id })
+          .orderBy('message.createdAt', 'DESC')
+          .limit(1)
+          .getOne();
+
+        return {
+          ...chat,
+          lastMessage: lastMessage || null
+        };
+      })
+    );
+
+    // Sort chats by last message timestamp (most recent first)
+    chatsWithLastMessage.sort((a, b) => {
+      if (!a.lastMessage && !b.lastMessage) return 0;
+      if (!a.lastMessage) return 1;
+      if (!b.lastMessage) return -1;
+      
+      const timeA = new Date(a.lastMessage.createdAt).getTime();
+      const timeB = new Date(b.lastMessage.createdAt).getTime();
+      return timeB - timeA; // Most recent first
+    });
+
+    console.log('User chats with last message:', chatsWithLastMessage);
+    return chatsWithLastMessage;
   }
 
   // New method to get messages for a specific chat
@@ -201,11 +238,6 @@ export class ChatService {
       where: { id: savedMessage.id },
       relations: ['sender']
     }) || savedMessage;
-
-    // 🚀 Emit the message to all connected sockets
-    if (this.chatGateway) {
-      await this.chatGateway.emitNewMessage(messageWithSender, chatId);
-    }
 
     return messageWithSender;
   }

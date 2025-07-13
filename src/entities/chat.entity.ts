@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, OneToMany, JoinTable } from 'typeorm';
 import { User } from './users.entity';
 import { Message } from './message.entity';
+
 @Entity()
 export class Chat {
   @PrimaryGeneratedColumn()
@@ -19,4 +20,7 @@ export class Chat {
 
   @OneToMany(() => Message, message => message.chat)
   messages: Message[];
+
+  // Virtual field for the last message (not stored in DB, computed in service)
+  lastMessage?: Message | null;
 }

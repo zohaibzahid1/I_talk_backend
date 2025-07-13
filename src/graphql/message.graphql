@@ -14,7 +14,7 @@ extend type Query {
 }
 
 extend type Mutation {
-  sendMessageToDB(chatId: ID!, content: String!): Message!
+  sendMessage(chatId: ID!, content: String!): Message!
   deleteMessage(messageId: ID!): Boolean!
 }
 

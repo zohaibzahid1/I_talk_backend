@@ -1,9 +1,8 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ChatService } from './chat.service';
 import { ChatResolver } from './chat.resolver';
-import { ChatGateway } from './chat.gateway';
 import { Chat } from '../entities/chat.entity';
 import { User } from '../entities/users.entity';
 import { Message } from '../entities/message.entity';
@@ -16,7 +15,7 @@ import { Message } from '../entities/message.entity';
       signOptions: { expiresIn: '7d' },
     }),
   ],
-  providers: [ChatService, ChatResolver, ChatGateway],
+  providers: [ChatService, ChatResolver],
   exports: [ChatService],
 })
 export class ChatModule {}

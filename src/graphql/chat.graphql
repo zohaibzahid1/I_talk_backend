@@ -3,6 +3,7 @@ type Chat {
   isGroup: Boolean!
   name: String
   participants: [User!]!
+  lastMessage: Message
 }
 
 extend type Query {

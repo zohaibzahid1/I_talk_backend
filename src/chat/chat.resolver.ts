@@ -106,6 +106,7 @@ export class ChatResolver {
   }
 
   @Mutation(() => Message)
+  
   @UseGuards(JwtGuard)
   async sendMessage(
     @Args('chatId', { type: () => ID }) chatId: string,
