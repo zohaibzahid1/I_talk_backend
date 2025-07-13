@@ -9,7 +9,7 @@ type Chat {
 extend type Query {
   getChat(id: Int!): Chat
   getUserChats: [Chat!]!
-  getChatMessages(chatId: Int!, limit: Int = 50, offset: Int = 0): [Message!]!
+  getChatMessages(chatId: Int!): [Message!]!
 }
 
 extend type Mutation {

@@ -10,7 +10,7 @@ type Message {
 
 extend type Query {
   getMessages(chatId: ID!): [Message!]!
-  getChatMessages(chatId: Int!, limit: Int = 50, offset: Int = 0): [Message!]!
+  getChatMessages(chatId: Int!): [Message!]!
 }
 
 extend type Mutation {

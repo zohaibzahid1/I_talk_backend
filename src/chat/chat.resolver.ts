@@ -29,8 +29,6 @@ export class ChatResolver {
   @UseGuards(JwtGuard)
   async getChatMessages(
     @Args('chatId', { type: () => Int }) chatId: number,
-    @Args('limit', { type: () => Int, defaultValue: 50 }) limit: number,
-    @Args('offset', { type: () => Int, defaultValue: 0 }) offset: number,
     @Context() context: any
   ): Promise<Message[]> {
     const user = context.req.user;
@@ -49,7 +47,7 @@ export class ChatResolver {
       throw new Error('User is not a participant in this chat');
     }
 
-    return await this.chatService.getChatMessages(chatId, limit, offset);
+    return await this.chatService.getChatMessages(chatId);
   }
   
 
@@ -106,7 +104,7 @@ export class ChatResolver {
   }
 
   @Mutation(() => Message)
-  
+
   @UseGuards(JwtGuard)
   async sendMessage(
     @Args('chatId', { type: () => ID }) chatId: string,

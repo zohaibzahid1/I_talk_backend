@@ -163,17 +163,14 @@ export class ChatService {
   }
 
   // New method to get messages for a specific chat
-  async getChatMessages(chatId: number, limit: number = 50, offset: number = 0): Promise<Message[]> {
+  async getChatMessages(chatId: number): Promise<Message[]> {
     const messages = await this.messageRepository
       .createQueryBuilder('message')
       .leftJoinAndSelect('message.sender', 'sender')
       .where('message.chatId = :chatId', { chatId })
       .orderBy('message.createdAt', 'ASC')
-      .limit(limit)
-      .offset(offset)
       .getMany();
 
-    console.log(`Chat ${chatId} messages:`, messages);
     return messages;
   }
 
