@@ -16,7 +16,7 @@ import { JwtModule } from '@nestjs/jwt'; // Import JwtModule
       PassportModule,
       JwtModule.register({
         secret: process.env.JWT_ACCESS_SECRET || 'your-access-secret-key',
-        signOptions: { expiresIn: '15m' },
+        signOptions: { expiresIn: '1m' },
       }),
     ], // Import the user module to access user services
 })

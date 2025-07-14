@@ -12,6 +12,7 @@ export class JwtGuard extends AuthGuard('jwt') {
             return gqlContext.getContext().req;
         }
         
+        
         // For REST endpoints, return the request as usual
         return context.switchToHttp().getRequest();
     }

@@ -6,16 +6,18 @@ import { ChatResolver } from './chat.resolver';
 import { Chat } from '../entities/chat.entity';
 import { User } from '../entities/users.entity';
 import { Message } from '../entities/message.entity';
+import { ChatGateway } from './chat.gateway';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Chat, User, Message]),
+    
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'your-secret-key',
       signOptions: { expiresIn: '7d' },
     }),
   ],
-  providers: [ChatService, ChatResolver],
+  providers: [ChatService, ChatResolver,ChatGateway],
   exports: [ChatService],
 })
 export class ChatModule {}

@@ -158,8 +158,7 @@ export class ChatService {
       return timeB - timeA; // Most recent first
     });
 
-    console.log('User chats with last message:', chatsWithLastMessage);
-    return chatsWithLastMessage;
+        return chatsWithLastMessage;
   }
 
   // New method to get messages for a specific chat

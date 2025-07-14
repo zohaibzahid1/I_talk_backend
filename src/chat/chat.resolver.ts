@@ -42,12 +42,14 @@ export class ChatResolver {
       throw new Error('Chat not found');
     }
 
+
     const isParticipant = chat.participants.some(p => p.id === user.userId);
     if (!isParticipant) {
       throw new Error('User is not a participant in this chat');
     }
 
-    return await this.chatService.getChatMessages(chatId);
+    const msgs = await this.chatService.getChatMessages(chatId);
+    return msgs;  
   }
   
 

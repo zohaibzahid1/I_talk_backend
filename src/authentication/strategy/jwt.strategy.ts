@@ -23,7 +23,7 @@ export class JwtStrategy extends PassportStrategy(JwtStrategyBase, 'jwt') {
   }
   // This method runs after the JWT is verified.
   async validate(payload: any) {
-    console.log("validate", payload);
+
     return { userId: payload.sub, email: payload.email }; // attach user info to request
   }
 }
