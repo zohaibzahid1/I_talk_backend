@@ -5,24 +5,89 @@ import {
   ConnectedSocket,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  WebSocketServer,
+  OnGatewayInit,
 } from '@nestjs/websockets';
 import { Socket, Server } from 'socket.io';
 import { Message } from 'src/entities/message.entity';
+import { UsersService } from 'src/users/users.service';
 
 @WebSocketGateway({
   cors: {
     origin: process.env.FRONTEND_URL ||  
     'http://localhost:3001',}
 })
-export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+  @WebSocketServer()
   server: Server;
 
-  handleConnection(client: Socket) {
-    // Client connected
+  // Store user sessions: userId -> socketId
+  private userSessions = new Map<string, string>();
+
+  constructor(private usersService: UsersService) {}
+
+  async afterInit(server: Server) {
+    console.log('Socket Gateway initialized');
+    // Set all users offline when server starts
+    try {
+      await this.usersService.setAllUsersOffline();
+      console.log('All users set to offline status');
+    } catch (error) {
+      console.error('Failed to set users offline on startup:', error);
+    }
   }
 
-  handleDisconnect(client: Socket) {
-    // Client disconnected
+  handleConnection(client: Socket) {
+    console.log(`Client connected: ${client.id}`);
+  }
+
+  async handleDisconnect(client: Socket) {
+    console.log(`Client disconnected: ${client.id}`);
+    
+    // Find and remove user session
+    for (const [userId, socketId] of this.userSessions.entries()) {
+      if (socketId === client.id) {
+        this.userSessions.delete(userId);
+        
+        // Update user online status in database
+        try {
+          await this.usersService.updateOnlineStatus(parseInt(userId), false);
+        } catch (error) {
+          console.error('Failed to update user offline status:', error);
+        }
+        
+        // Broadcast user offline status
+        this.server.emit('userStatusChanged', { 
+          userId, 
+          isOnline: false 
+        });
+        break;
+      }
+    }
+  }
+
+  @SubscribeMessage('userOnline')
+  async handleUserOnline(
+    @MessageBody() userId: string,
+    @ConnectedSocket() client: Socket,
+  ) {
+    // Store user session
+    this.userSessions.set(userId, client.id);
+    
+    // Update user online status in database
+    try {
+      await this.usersService.updateOnlineStatus(parseInt(userId), true);
+    } catch (error) {
+      console.error('Failed to update user online status:', error);
+    }
+    
+    // Broadcast user online status
+    this.server.emit('userStatusChanged', { 
+      userId, 
+      isOnline: true 
+    });
+    
+    console.log(`User ${userId} is now online`);
   }
 
   @SubscribeMessage('sendMessage')

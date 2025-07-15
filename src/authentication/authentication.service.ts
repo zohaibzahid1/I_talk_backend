@@ -35,6 +35,14 @@ export class AuthenticationService {
     // Store refresh token after hashing in DB
     await this.storeRefreshToken(user.id, tokens.refreshToken);
     
+    // Set user online status in database (user just authenticated)
+    try {
+        await this.usersService.updateOnlineStatus(user.id, true);
+        console.log('User online status set to true');
+    } catch (error) {
+        console.error('Failed to set user online status:', error);
+    }
+    
     // set auth cookies
     this.setAuthCookies(res, tokens);
     

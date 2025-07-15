@@ -64,4 +64,17 @@ export class UsersService {
     return this.usersRepo.find();
   }
 
+  // Update online status
+  async updateOnlineStatus(userId: number, isOnline: boolean): Promise<void> {
+    await this.usersRepo.update(userId, { isOnline });
+  }
+
+  // Set all users offline (useful for app startup)
+  async setAllUsersOffline(): Promise<void> {
+    await this.usersRepo.createQueryBuilder()
+      .update(User)
+      .set({ isOnline: false })
+      .execute();
+  }
+
 }
