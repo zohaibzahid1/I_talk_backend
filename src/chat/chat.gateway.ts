@@ -104,4 +104,34 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   handleJoinRoom(@MessageBody() chatId: string, @ConnectedSocket() client: Socket) {
     client.join(chatId);
   }
+
+  @SubscribeMessage('userStartTyping')
+  async handleUserStartTyping(
+    @MessageBody() data: { chatId: string; userId: string },
+    @ConnectedSocket() client: Socket
+  ) {
+    const { chatId, userId } = data;
+    
+    // Emit to all other clients in the chat room (exclude sender)
+    client.to(chatId).emit('userTypingStatusChanged', {
+      chatId,
+      userId,
+      isTyping: true
+    });
+  }
+
+  @SubscribeMessage('userStopTyping')
+  async handleUserStopTyping(
+    @MessageBody() data: { chatId: string; userId: string },
+    @ConnectedSocket() client: Socket
+  ) {
+    const { chatId, userId } = data;
+    
+    // Emit to all other clients in the chat room (exclude sender)
+    client.to(chatId).emit('userTypingStatusChanged', {
+      chatId,
+      userId,
+      isTyping: false
+    });
+  }
 }
