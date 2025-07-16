@@ -6,6 +6,7 @@ import { UsersService } from 'src/users/users.service';
 
 @Resolver()
 export class AuthenticationResolver {
+  
   constructor(
     private readonly authenticationService: AuthenticationService,
     private readonly usersService: UsersService

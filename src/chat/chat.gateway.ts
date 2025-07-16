@@ -49,18 +49,18 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       if (socketId === client.id) {
         this.userSessions.delete(userId);
         
-        // Update user online status in database
-        try {
-          await this.usersService.updateOnlineStatus(parseInt(userId), false);
-        } catch (error) {
-          console.error('Failed to update user offline status:', error);
-        }
+        // // Update user online status in database
+        // try {
+        //   await this.usersService.updateOnlineStatus(parseInt(userId), false);
+        // } catch (error) {
+        //   console.error('Failed to update user offline status:', error);
+        // }
         
         // Broadcast user offline status
-        this.server.emit('userStatusChanged', { 
-          userId, 
-          isOnline: false 
-        });
+        // this.server.emit('userStatusChanged', { 
+        //   userId, 
+        //   isOnline: false 
+        // });
         break;
       }
     }
@@ -88,6 +88,29 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     });
     
     console.log(`User ${userId} is now online`);
+  }
+
+  @SubscribeMessage('userOffline')
+  async handleUserOffline(
+    @MessageBody() userId: string,
+    @ConnectedSocket() client: Socket,
+  ) {
+    // Remove user session
+    this.userSessions.delete(userId);
+    
+    // Update user online status in database
+    try {
+      await this.usersService.updateOnlineStatus(parseInt(userId), false);
+    } catch (error) {
+      console.error('Failed to update user offline status:', error);
+    }
+    
+    // Broadcast user offline status
+    this.server.emit('userStatusChanged', { 
+      userId, 
+      isOnline: false 
+    });
+    console.log(`User ${userId} is now offline`);
   }
 
   @SubscribeMessage('sendMessage')
