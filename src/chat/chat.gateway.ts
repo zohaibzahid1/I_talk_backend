@@ -8,6 +8,7 @@ import {
   WebSocketServer,
   OnGatewayInit,
 } from '@nestjs/websockets';
+import { console } from 'inspector';
 import { Socket, Server } from 'socket.io';
 import { Message } from 'src/entities/message.entity';
 import { UsersService } from 'src/users/users.service';
@@ -121,6 +122,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     const { chatId, message } = data;
     // Broadcast to other clients in the chat
     client.to(chatId).emit('receiveMessage', { chatId, message });  
+  
   }
 
   @SubscribeMessage('joinRoom')
