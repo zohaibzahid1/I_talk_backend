@@ -59,10 +59,16 @@ export class AuthenticationResolver {
     // if the JWT guard is used, it will automatically validate the token
     // and attach the user to the request object
     // You can access the user from the context to check if the token is valid
+    const response = context.res;
+    
     const user = context.req.user;
     if (!user) {
+      // remove cookies if user is not authenticated
+      response.clearCookie('access_token', {});
+      response.clearCookie('refresh_token', {});
       return false; // Token is invalid or expired
     }
     return true; // Token is valid
   }
 }
+

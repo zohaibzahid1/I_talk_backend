@@ -8,7 +8,6 @@ import {
   WebSocketServer,
   OnGatewayInit,
 } from '@nestjs/websockets';
-import { console } from 'inspector';
 import { Socket, Server } from 'socket.io';
 import { Message } from 'src/entities/message.entity';
 import { UsersService } from 'src/users/users.service';
@@ -28,7 +27,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   constructor(private usersService: UsersService) {}
 
   async afterInit(server: Server) {
-    console.log('Socket Gateway initialized');
+    console.log('=== Socket Gateway initialized ===');
     // Set all users offline when server starts
     try {
       await this.usersService.setAllUsersOffline();
@@ -39,16 +38,19 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   }
 
   handleConnection(client: Socket) {
-    console.log(`Client connected: ${client.id}`);
+    console.log(`=== Client connected: ${client.id} ===`);
+    console.log(`Total connections: ${this.server.engine.clientsCount}`);
   }
 
   async handleDisconnect(client: Socket) {
-    console.log(`Client disconnected: ${client.id}`);
+    console.log(`=== Client disconnected: ${client.id} ===`);
+    console.log(`Total connections: ${this.server.engine.clientsCount}`);
     
     // Find and remove user session
     for (const [userId, socketId] of this.userSessions.entries()) {
       if (socketId === client.id) {
         this.userSessions.delete(userId);
+        console.log(`Removed user session for userId: ${userId}`);
         
         // // Update user online status in database
         // try {
@@ -72,8 +74,17 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     @MessageBody() userId: string,
     @ConnectedSocket() client: Socket,
   ) {
+    console.log(`=== User ${userId} coming online on socket ${client.id} ===`);
+    
+    // Check if user already has a session
+    const existingSocketId = this.userSessions.get(userId);
+    if (existingSocketId && existingSocketId !== client.id) {
+      console.log(`User ${userId} already has a session with socket ${existingSocketId}, replacing with ${client.id}`);
+    }
+    
     // Store user session
     this.userSessions.set(userId, client.id);
+    console.log(`User sessions count: ${this.userSessions.size}`);
     
     // Update user online status in database
     try {
@@ -88,7 +99,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       isOnline: true 
     });
     
-    console.log(`User ${userId} is now online`);
+    
   }
 
   @SubscribeMessage('userOffline')
@@ -121,8 +132,8 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   ) {
     const { chatId, message } = data;
     // Broadcast to other clients in the chat
+    console.log(`Message sent in chat ${chatId}:`, message);
     client.to(chatId).emit('receiveMessage', { chatId, message });  
-  
   }
 
   @SubscribeMessage('joinRoom')

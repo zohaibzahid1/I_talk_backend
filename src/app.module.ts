@@ -31,8 +31,11 @@ import { Chat } from './entities/chat.entity';
       username: process.env.DB_USER,
       password: process.env.DB_PASS,
       database: process.env.DB_NAME,
-      entities: [User, Message, Chat],
-      synchronize: true, // set to false in production
+      entities: [__dirname + '/**/*.entity.{ts,js}'], // Path to your entity files
+      migrations: [__dirname + '/../migrations/*.{ts,js}'], // Path to your migration files
+      synchronize: false, // ❌ Do not use in production because we use migrations
+      autoLoadEntities: true, 
+      migrationsTableName: 'migrations', // where all migrations are stored
     }),
     UsersModule,
     AuthenticationModule,
