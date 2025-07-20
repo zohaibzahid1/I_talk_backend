@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, forwardRef, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Chat } from '../entities/chat.entity';
 import { User } from '../entities/users.entity';
 import { Message } from '../entities/message.entity';
+import { ChatGateway } from './chat.gateway';
 
 @Injectable()
 export class ChatService {
@@ -14,6 +15,8 @@ export class ChatService {
     private userRepository: Repository<User>,
     @InjectRepository(Message)
     private messageRepository: Repository<Message>,
+    @Inject(forwardRef(() => ChatGateway))
+    private chatGateway: ChatGateway,
   ) {}
 
   async findOrCreateDirectChat(currentUserId: number, otherUserId: number): Promise<Chat> {
@@ -73,7 +76,7 @@ export class ChatService {
       participants: users,
       messages: []
     });
-
+    // join the chat room for the current user
     const savedChat = await this.chatRepository.save(newChat);
     
     // Return chat with participants and lastMessage as null (new chat)
@@ -82,10 +85,15 @@ export class ChatService {
       relations: ['participants']
     }) || savedChat;
 
-    return {
+    const finalChat = {
       ...chatWithParticipants,
       lastMessage: null
     };
+
+    // Notify other participant about the new chat (exclude the creator)
+    this.chatGateway.notifyNewChatCreated(finalChat, currentUserId);
+
+    return finalChat;
   }
 
   async createGroupChat(name: string, participantIds: number[]): Promise<Chat> {
@@ -106,11 +114,21 @@ export class ChatService {
 
     const savedChat = await this.chatRepository.save(newChat);
 
-    // Return new chat with lastMessage as null
-    return {
-      ...savedChat,
+    // Get the full chat with participants
+    const chatWithParticipants = await this.chatRepository.findOne({
+      where: { id: savedChat.id },
+      relations: ['participants']
+    }) || savedChat;
+
+    const finalChat = {
+      ...chatWithParticipants,
       lastMessage: null
     };
+
+    // Notify all participants about the new group chat
+    this.chatGateway.notifyNewChatCreated(finalChat);
+
+    return finalChat;
   }
 
   async findChatById(id: number): Promise<Chat | null> {

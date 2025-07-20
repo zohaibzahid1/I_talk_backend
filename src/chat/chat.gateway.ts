@@ -8,9 +8,11 @@ import {
   WebSocketServer,
   OnGatewayInit,
 } from '@nestjs/websockets';
+import { Exclude } from 'class-transformer';
 import { Socket, Server } from 'socket.io';
 import { Message } from 'src/entities/message.entity';
 import { UsersService } from 'src/users/users.service';
+
 
 @WebSocketGateway({
   cors: {
@@ -147,7 +149,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     @ConnectedSocket() client: Socket
   ) {
     const { chatId, userId } = data;
-    
+    console.log(`User ${userId} is typing in chat ${chatId}`);
     // Emit to all other clients in the chat room (exclude sender)
     client.to(chatId).emit('userTypingStatusChanged', {
       chatId,
@@ -168,6 +170,31 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       chatId,
       userId,
       isTyping: false
+    });
+  }
+
+  // Notify participants when a new chat is created
+  notifyNewChatCreated(chat: any, excludeUserId?: number) {
+    console.log(`=== Notifying participants about new chat ${chat.id} ===`);
+    console.log('Chat participants:', chat.participants.map(p => p.id));
+    // Notify each participant about the new chat
+    chat.participants.forEach((participant: any) => {
+      // Skip the user who created the chat if excludeUserId is provided
+        
+      if (excludeUserId && participant.id === excludeUserId) {
+        console.log('excluding creator from notification', excludeUserId);
+        return;
+      }
+      
+      const participantSocketId = this.userSessions.get(participant.id.toString());
+      if (participantSocketId) {
+        console.log(`Notifying user ${participant.id} about new chat via socket ${participantSocketId}`);
+        this.server.to(participantSocketId).emit('newChatCreated', {
+          chat: chat
+        });
+      } else {
+        console.log(`User ${participant.id} is not online, cannot notify about new chat`);
+      }
     });
   }
 }
